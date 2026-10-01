@@ -22,7 +22,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var showCorrected by mutableStateOf(false); private set
     var status by mutableStateOf("请选择输入文件夹"); private set
 
-    // 批量处理相关
     private var inputUris: List<Uri> = emptyList()
     private var currentIndex = -1
     private var outputUri: Uri? = null
@@ -43,7 +42,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             inputUris = files
             currentIndex = 0
-            outputUri = null // 重新选输入文件夹后，清空输出
+            outputUri = null
             loadCurrentImage()
         }
     }
@@ -115,9 +114,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // 核心：翻页时自动保存
     private suspend fun autoSaveCurrent(): Boolean {
-        val bmp = correctedBitmap ?: return true // 没有校正结果就不保存
+        val bmp = correctedBitmap ?: return true
         val dirUri = outputUri
         if (dirUri == null) {
             status = "未设置输出文件夹，无法自动保存"
@@ -158,7 +156,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            // 跳过时不自动保存
             correctedBitmap = null
             points = emptyList()
             showCorrected = false
