@@ -32,7 +32,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 correctedBitmap = null
                 points = emptyList()
                 showCorrected = false
-                status = "请点击四个角点（左上 → 右上 → 右下 → 左下）"
+                // 修改了这里的状态提示文字
+                status = "按住屏幕拖动微调，松手确认选点（依序点击四个角）"
             } else {
                 status = "读取图片失败"
             }
