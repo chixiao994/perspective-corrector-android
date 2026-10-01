@@ -1,13 +1,12 @@
 package com.example.perspectivecorrector
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import kotlin.math.max
 
 object BitmapUtils {
@@ -41,22 +40,19 @@ object BitmapUtils {
         } catch (e: Exception) { null }
     }
 
-    fun saveToGallery(context: Context, bitmap: Bitmap): Boolean {
+    // 新增：保存到指定的文件夹（SAF 方式）
+    fun saveToFolder(context: Context, folderUri: Uri, bitmap: Bitmap, fileName: String): Boolean {
         return try {
-            val name = "corrected_${System.currentTimeMillis()}.jpg"
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PerspectiveCorrector")
-                }
-            }
-            val uri = context.contentResolver.insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
-            context.contentResolver.openOutputStream(uri)?.use {
+            val dir = DocumentFile.fromTreeUri(context, folderUri) ?: return false
+            // 如果同名文件已存在，先删除
+            dir.findFile(fileName)?.delete()
+            val file = dir.createFile("image/jpeg", fileName) ?: return false
+            context.contentResolver.openOutputStream(file.uri)?.use {
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it)
             }
             true
-        } catch (e: Exception) { false }
+        } catch (e: Exception) {
+            false
+        }
     }
 }
