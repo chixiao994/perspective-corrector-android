@@ -1,1 +1,9 @@
-# perspective-corrector-android
+# 透视校正 Android
+
+Android 版的图像透视校正工具。
+
+## 用法
+1. 打开 → 选择图片
+2. 依次点击四个角点（左上 → 右上 → 右下 → 左下）
+3. 校正 → 自动透视拉平
+4. 保存 → 输出到相册 Pictures/
