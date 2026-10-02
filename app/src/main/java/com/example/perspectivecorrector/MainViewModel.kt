@@ -26,6 +26,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var currentIndex = -1
     private var outputUri: Uri? = null
 
+    // 保存每张图的标记点，key 为索引
+    private val savedPoints = mutableMapOf<Int, List<Offset>>()
+    // 记录已经保存过校正结果的图片索引，避免重复保存
+    private val savedIndices = mutableSetOf<Int>()
+
     fun setInputFolder(uri: Uri) {
         viewModelScope.launch {
             status = "正在扫描图片…"
@@ -43,6 +48,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             inputUris = files
             currentIndex = 0
             outputUri = null
+            savedPoints.clear()
+            savedIndices.clear()   // 换文件夹时清空保存记录
             loadCurrentImage()
         }
     }
@@ -59,12 +66,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val bmp = withContext(Dispatchers.IO) {
             BitmapUtils.decodeBitmap(getApplication(), uri)
         }
+
         if (bmp != null) {
             originalBitmap = bmp
             correctedBitmap = null
-            points = emptyList()
             showCorrected = false
-            status = "第 ${currentIndex + 1}/${inputUris.size} 张 | 按住拖动微调，松手选点"
+
+            // 恢复该张图片的历史选点
+            val restoredPoints = savedPoints[currentIndex] ?: emptyList()
+            points = restoredPoints
+
+            if (restoredPoints.size == 4) {
+                status = "第 ${currentIndex + 1}/${inputUris.size} 张 | 已恢复标记点，点击“预览”查看效果"
+            } else {
+                status = "第 ${currentIndex + 1}/${inputUris.size} 张 | 已选 ${restoredPoints.size}/4 个点"
+            }
         } else {
             status = "第 ${currentIndex + 1}/${inputUris.size} 张 | 读取失败"
         }
@@ -77,8 +93,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         points = points + p
+        // 选点变了，之前的预览和保存记录失效
+        correctedBitmap = null
+        showCorrected = false
+        savedPoints[currentIndex] = points
+        savedIndices.remove(currentIndex)   // 标记需要重新保存
+
         status = when (points.size) {
-            4 -> "四个角点已选定，点击“校正”"
+            4 -> "四个角点已选定，点击“预览”查看效果"
             else -> "已选 ${points.size}/4 个点"
         }
     }
@@ -87,43 +109,61 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         points = emptyList()
         correctedBitmap = null
         showCorrected = false
+        savedPoints[currentIndex] = emptyList()
+        savedIndices.remove(currentIndex)   // 选点清空，需要重新保存
+
         status = "已重置，请重新选点"
     }
 
-    fun toggleView() {
-        if (correctedBitmap == null) return
-        showCorrected = !showCorrected
-        status = if (showCorrected) "正在显示校正结果" else "已切回原图"
-    }
+    fun preview() {
+        if (showCorrected) {
+            showCorrected = false
+            status = "已切回原图，可重新选点或再次预览"
+            return
+        }
 
-    fun correct() {
         val src = originalBitmap ?: run { status = "请先选择图片"; return }
-        if (points.size != 4) { status = "请先选满 4 个角点"; return }
-        viewModelScope.launch {
-            status = "正在校正…"
-            try {
-                val out = withContext(Dispatchers.Default) {
-                    PerspectiveCorrector.correct(src, points)
+        if (points.size != 4) {
+            status = "请先选满 4 个角点，再点击预览"
+            return
+        }
+
+        if (correctedBitmap == null) {
+            viewModelScope.launch {
+                status = "正在生成预览…"
+                try {
+                    val out = withContext(Dispatchers.Default) {
+                        PerspectiveCorrector.correct(src, points)
+                    }
+                    correctedBitmap = out
+                    showCorrected = true
+                    status = "预览校正结果，翻页时将自动保存"
+                } catch (e: Exception) {
+                    status = "生成预览失败：${e.message}"
                 }
-                correctedBitmap = out
-                showCorrected = true
-                status = "校正完成，翻页时将自动保存"
-            } catch (e: Exception) {
-                status = "校正失败：${e.message}"
             }
+        } else {
+            showCorrected = true
+            status = "正在显示校正结果，翻页时将自动保存"
         }
     }
 
     private suspend fun autoSaveCurrent(): Boolean {
         val bmp = correctedBitmap ?: return true
-        val dirUri = outputUri
-        if (dirUri == null) {
-            status = "未设置输出文件夹，无法自动保存"
-            return false
+        val dirUri = outputUri ?: return false
+
+        // 已经保存过且选点未修改，跳过保存
+        if (currentIndex in savedIndices) {
+            return true
         }
-        return withContext(Dispatchers.IO) {
+
+        val ok = withContext(Dispatchers.IO) {
             BitmapUtils.saveToFolder(getApplication(), dirUri, bmp, "corrected_${currentIndex + 1}.jpg")
         }
+        if (ok) {
+            savedIndices.add(currentIndex)   // 标记为已保存
+        }
+        return ok
     }
 
     fun nextImage() {
@@ -156,19 +196,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            correctedBitmap = null
-            points = emptyList()
-            showCorrected = false
             currentIndex++
             loadCurrentImage()
-        }
-    }
-
-    fun saveCurrentManually() {
-        val bmp = correctedBitmap ?: run { status = "没有可保存的结果"; return }
-        viewModelScope.launch {
-            val ok = autoSaveCurrent()
-            status = if (ok) "手动保存成功" else "保存失败"
         }
     }
 }
