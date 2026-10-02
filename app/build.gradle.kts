@@ -32,6 +32,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.core:core-ktx:1.13.1")
-    // 新增：解决 DocumentFile 报错
     implementation("androidx.documentfile:documentfile:1.0.1")
+    // 新增：提供 Modifier.magnifier 和手势检测
+    implementation("androidx.compose.foundation:foundation")
 }
