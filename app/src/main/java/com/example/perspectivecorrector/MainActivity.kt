@@ -37,35 +37,34 @@ fun PerspectiveScreen(vm: MainViewModel = viewModel()) {
     ) { uri -> uri?.let { vm.setOutputFolder(it) } }
 
     Column(Modifier.fillMaxSize()) {
-        // ========== 顶部：输入/输出、重置/预览 ==========
+        // ========== 顶部：输入、输出、重置、预览（一排） ==========
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Button(
                 onClick = { pickInputDir.launch(null) },
-                modifier = Modifier.weight(1f)
-            ) { Text("输入") }
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+            ) { Text("输入", maxLines = 1) }
 
             Button(
                 onClick = { pickOutputDir.launch(null) },
-                modifier = Modifier.weight(1f)
-            ) { Text("输出") }
-        }
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+            ) { Text("输出", maxLines = 1) }
 
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
             OutlinedButton(
                 onClick = vm::reset,
-                modifier = Modifier.weight(1f)
-            ) { Text("重置") }
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+            ) { Text("重置", maxLines = 1) }
 
             Button(
                 onClick = vm::preview,
-                modifier = Modifier.weight(1f)
-            ) { Text("预览") }
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+            ) { Text("预览", maxLines = 1) }
         }
 
         // ========== 中间：图像画布 ==========
