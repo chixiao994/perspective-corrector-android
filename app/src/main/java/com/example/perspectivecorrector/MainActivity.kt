@@ -28,25 +28,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PerspectiveScreen(vm: MainViewModel = viewModel()) {
-    // 选择输入文件夹
     val pickInputDir = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            // 申请持久化权限
-            vm.setInputFolder(it)
-        }
-    }
+    ) { uri -> uri?.let { vm.setInputFolder(it) } }
 
-    // 选择输出文件夹
     val pickOutputDir = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let { vm.setOutputFolder(it) }
-    }
+    ) { uri -> uri?.let { vm.setOutputFolder(it) } }
 
     Column(Modifier.fillMaxSize()) {
-        // 第一行：文件夹选择
+        // ========== 顶部：输入/输出、重置/预览 ==========
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -54,43 +45,50 @@ fun PerspectiveScreen(vm: MainViewModel = viewModel()) {
             Button(
                 onClick = { pickInputDir.launch(null) },
                 modifier = Modifier.weight(1f)
-            ) { Text("输入文件夹") }
+            ) { Text("输入") }
 
             Button(
                 onClick = { pickOutputDir.launch(null) },
                 modifier = Modifier.weight(1f)
-            ) { Text("输出文件夹") }
+            ) { Text("输出") }
         }
 
-        // 第二行：图片操作
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Button(
-                onClick = vm::correct,
-                modifier = Modifier.weight(1f)
-            ) { Text("校正") }
-
-            Button(
-                onClick = vm::saveCurrentManually,
-                modifier = Modifier.weight(1f)
-            ) { Text("保存") }
-
             OutlinedButton(
                 onClick = vm::reset,
                 modifier = Modifier.weight(1f)
             ) { Text("重置") }
 
-            OutlinedButton(
-                onClick = vm::toggleView,
+            Button(
+                onClick = vm::preview,
                 modifier = Modifier.weight(1f)
-            ) { Text("切换") }
+            ) { Text("预览") }
         }
 
-        // 第三行：翻页与跳过
+        // ========== 中间：图像画布 ==========
+        ImageCanvas(
+            bitmap = if (vm.showCorrected) vm.correctedBitmap else vm.originalBitmap,
+            points = vm.points,
+            showPoints = !vm.showCorrected,
+            onTap = vm::addPoint,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .background(Color(0xFF2B2B2B))
+        )
+
+        // ========== 底部：状态栏与翻页 ==========
+        Text(
+            text = vm.status,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            fontWeight = FontWeight.Medium
+        )
+
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             OutlinedButton(
@@ -108,24 +106,5 @@ fun PerspectiveScreen(vm: MainViewModel = viewModel()) {
                 modifier = Modifier.weight(1f)
             ) { Text("下一张 ▶") }
         }
-
-        // 图像区域
-        ImageCanvas(
-            bitmap = if (vm.showCorrected) vm.correctedBitmap else vm.originalBitmap,
-            points = vm.points,
-            showPoints = !vm.showCorrected,
-            onTap = vm::addPoint,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .background(Color(0xFF2B2B2B))
-        )
-
-        // 状态栏
-        Text(
-            text = vm.status,
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            fontWeight = FontWeight.Medium
-        )
     }
 }
